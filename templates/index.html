@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}My Tasks - Get It Done!{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h1 class="mb-4">My projects</h1>
+
+    {% if projects|length == 0 %}
+    <div class="accordion" id="projectsAccordion">
+        {% for project in projects %}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading{{ project.id }}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-targert="#collapse{{ project.id}}" aria-expanded="false" aria-controls="collapsed{{ project.id }}">
+                    {{ project.name }}
+                </button>
+            </h2>
+
+            <div id="collapse{{ project.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ project.id }}" data-bs-parent="#projectsAccordion">
+                <div class="accordion-body">
+                    {% if project.tasks|length > 0 %}
+                    <div class="row">
+                        {% for task in project.tasks %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ task.title }}</h5>
+                                    <p class="card-text">{{ task.description }}</p>
+                                    <span class="badge bg-{{ 'danger' if task.priority == 'High' else 'warning' if task.priority == 'Medium' else 'success' }}">
+                                        {{ task.priority }}
+                                    </span>
+                                    <p class="text-muted mt-2">Due: {{ task.due_date.strftime('%Y-%m-%d') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No tasks available for this project.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info" role="alert">
+        No projects available. Please add some projects to get started!
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
