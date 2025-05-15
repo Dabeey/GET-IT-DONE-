@@ -16,13 +16,12 @@ import json
 
 app = Flask(__name__)
 
-
 # Configure the database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///get_it_done.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
-db = SQLAlchemy(app)
+db.init_app(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 
@@ -33,6 +32,9 @@ def get_current_timestamp():
 def get_enum_values(enum_column):
     return [e.value for e in inspect(enum_column.type).enums]
 
+
+with app.app_context():
+    db.create_all()  # Create tables in the database
 
 
 ################ EVERYTHING ERROR HANDLING #########################
@@ -88,7 +90,7 @@ def login():
                 flash('An error occurred during login. Please try again.', 'danger')
         else:
             flash('Invalid email or password.', 'danger')
-    return render_template('login.html')
+    return render_template('register.html')
 
 
 @app.route('/logout')

@@ -1,83 +1,64 @@
-/* General Styles */
 body {
     background: linear-gradient(135deg, #6a11cb, #2575fc);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     font-family: 'Poppins', sans-serif;
-    color: #333;
     margin: 0;
-    padding: 0;
 }
-
-/* Navbar */
-.navbar {
-    background: #333;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.navbar-brand {
-    font-weight: bold;
-    font-size: 1.5rem;
-    color: #fff !important;
-}
-
-.nav-link {
-    color: #ddd !important;
-    transition: color 0.3s ease;
-}
-
-.nav-link:hover {
-    color: #6a11cb !important;
-}
-
-/* Main Content */
-main {
-    background: #fff;
-    padding: 2rem;
+.login-container {
+    background: #ffffff;
+    padding: 2.5rem;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
 }
-
-/* Footer */
-footer {
-    background: #333;
-    color: #fff;
+.login-container h1 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+.login-container p {
     font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 2rem;
 }
-
-/* Buttons */
-.btn-primary {
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
-    border: none;
-    border-radius: 10px;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, #2575fc, #6a11cb);
-    transform: translateY(-2px);
-}
-
-/* Forms */
 .form-control {
     border-radius: 10px;
     padding: 0.75rem;
     font-size: 1rem;
 }
-
 .form-control:focus {
     border-color: #6a11cb;
     box-shadow: 0 0 0 0.2rem rgba(106, 17, 203, 0.25);
 }
-
-/* Links */
-a {
+.btn-primary {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    border: none;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+.btn-primary:hover {
+    background: linear-gradient(135deg, #2575fc, #6a11cb);
+    transform: translateY(-2px);
+}
+.footer-text {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+.footer-text a {
     color: #6a11cb;
     text-decoration: none;
-    transition: color 0.3s ease;
+    font-weight: bold;
 }
-
-a:hover {
-    color: #2575fc;
+.footer-text a:hover {
     text-decoration: underline;
 }
