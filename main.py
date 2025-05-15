@@ -79,18 +79,27 @@ def login():
             flash('Both email and password are required.', 'danger')
             return redirect(url_for('login'))
 
+        # Check if the user exists
         user = User.query.filter_by(email=email).first()
-        if user and user.password == password:
-            try:
-                login_user(user)
-                flash('Login successful!', 'success')
-                return redirect(url_for('index'))
-            except Exception as e:
-                logging.error(f"Error during login: {str(e)}")
-                flash('An error occurred during login. Please try again.', 'danger')
-        else:
+        if not user:
+            flash('No account found with that email. Please register first.', 'danger')
+            return redirect(url_for('register'))
+
+        # Verify the password
+        if not user.check_password(password):  # Use hashed password comparison
             flash('Invalid email or password.', 'danger')
-    return render_template('register.html')
+            return redirect(url_for('login'))
+
+        # Log the user in
+        try:
+            login_user(user)
+            flash('Login successful!', 'success')
+            return redirect(url_for('index'))
+        except Exception as e:
+            logging.error(f"Error during login: {str(e)}")
+            flash('An error occurred during login. Please try again.', 'danger')
+
+    return render_template('login.html')
 
 
 @app.route('/logout')
