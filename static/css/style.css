@@ -1,3 +1,7 @@
+body {
+    padding-top: 70px; 
+}
+
 /* Login Section Styling */
 .login-body {
     background: linear-gradient(135deg, #6a11cb, #2575fc);
@@ -56,6 +60,60 @@
 
 .btn-primary:hover {
     background: linear-gradient(135deg, #2575fc, #6a11cb);
+    transform: translateY(-2px);
+    
+}
+
+/* Green Gradient Button */
+.btn-gradient-green {
+    background: linear-gradient(135deg, #28a745, #07ee95);
+    border: none;
+    color: #fff;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.btn-gradient-green:hover {
+    background: linear-gradient(135deg, #07ee95,#28a745);
+    color: #fff; /* Ensure text stays white on hover */
+    transform: translateY(-2px);
+}
+
+/* Red Gradient Button */
+.btn-gradient-red {
+    background: linear-gradient(135deg, #dc3545, #f15757);
+    border: none;
+    color: #fff;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.btn-gradient-red:hover {
+    background: linear-gradient(135deg, #f15757,#dc3545);
+    color: #fff; /* Ensure text stays white on hover */
+    transform: translateY(-2px);
+}
+
+/* Primary Gradient Button (for consistency) */
+.btn-primary {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    border: none;
+    color: #fff;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #2575fc, #6a11cb);
+    color: #fff; /* Ensure text stays white on hover */
     transform: translateY(-2px);
 }
 
