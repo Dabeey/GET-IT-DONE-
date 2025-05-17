@@ -1,51 +1,51 @@
 {% extends 'base.html' %}
 
-{% block title %}All Tasks - Get It Done!{% endblock %}
+{% block title %}Tasks - Get It Done!{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1 class="mb-4 text-center">All Tasks</h1>
+    <h1 class="mb-4 text-center">
+        {% if project %}
+        Tasks for Project: {{ project.name }}
+        {% else %}
+        All Tasks
+        {% endif %}
+    </h1>
+    <a href="{{ url_for('add_task') }}" class="btn btn-primary mb-4">Add New Task</a>
 
-    {% if tasks|length > 0 %}
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Description</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Due Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for task in tasks %}
-                <tr>
-                    <td>{{ task.title }}</td>
-                    <td>{{ task.description }}</td>
-                    <td>
-                        <span class="badge bg-{{ 'danger' if task.priority == 'High' else 'warning' if task.priority == 'Medium' else 'success' }}">
-                            {{ task.priority }}
-                        </span>
-                    </td>
-                    <td>{{ task.status }}</td>
-                    <td>{{ task.due_date.strftime('%Y-%m-%d') }}</td>
-                    <td>
-                        <a href="{{ url_for('edit_task', task_id=task.id) }}" class="btn btn-sm btn-primary">Edit</a>
-                        <form method="POST" action="{{ url_for('delete_task', task_id=task.id) }}" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    {% if tasks %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.title }}</td>
+                <td>{{ task.description or "No description" }}</td>
+                <td>{{ task.priority }}</td>
+                <td>{{ task.status }}</td>
+                <td>{{ task.due_date or "No due date" }}</td>
+                <td>
+                    <a href="{{ url_for('edit_task', task_id=task.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                    <form method="POST" action="{{ url_for('delete_task', task_id=task.id) }}" class="d-inline">
+                        {{ form.hidden_tag() }}
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-    <div class="alert alert-info text-center" role="alert">
-        No tasks available. Start by adding some tasks!
-    </div>
+    <div class="alert alert-info text-center">No tasks available. Add a new task to get started!</div>
     {% endif %}
 </div>
 {% endblock %}

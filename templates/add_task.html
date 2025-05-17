@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Task - Get It Done!{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Add New Task</h1>
+    <form method="POST" action="{{ url_for('add_task') }}" class="shadow-lg p-4 bg-white rounded">
+        {{ form.hidden_tag() }} <!-- CSRF Token -->
+
+        <!-- Task Title -->
+        <div class="form-group mb-3">
+            <label for="title" class="form-label">Title*</label>
+            <input type="text" id="title" name="title" class="form-control" placeholder="Enter task title" required>
+        </div>
+
+        <!-- Task Description -->
+        <div class="form-group mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea id="description" name="description" class="form-control" placeholder="Enter task description"></textarea>
+        </div>
+
+        <!-- Due Date -->
+        <div class="form-group mb-3">
+            <label for="due_date" class="form-label">Due Date*</label>
+            <input type="date" id="due_date" name="due_date" class="form-control" required>
+        </div>
+
+        <!-- Priority -->
+        <div class="form-group mb-3">
+            <label for="priority" class="form-label">Priority*</label>
+            <select id="priority" name="priority" class="form-select" required>
+                {% for priority in priorities %}
+                    <option value="{{ priority.value }}">{{ priority.value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Status -->
+        <div class="form-group mb-3">
+            <label for="status" class="form-label">Status*</label>
+            <select id="status" name="status" class="form-select" required>
+                {% for status in statuses %}
+                    <option value="{{ status.value }}">{{ status.value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Project -->
+        <div class="form-group mb-3">
+            <label for="project_id" class="form-label">Project*</label>
+            <select id="project_id" name="project_id" class="form-select" required>
+                {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-gradient-primary btn-lg w-100">Create Task</button>
+    </form>
+</div>
+{% endblock %}

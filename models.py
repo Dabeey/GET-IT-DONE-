@@ -8,14 +8,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 class PriorityLevel(PyEnum):
-    HIGH = 'High'
-    MEDIUM = 'Medium'
-    LOW = 'Low'
+    High = 'High'
+    Medium = 'Medium'
+    Low = 'Low'
 
 class TaskStatus(PyEnum):
-    PENDING = 'Pending'
-    IN_PROGRESS = 'In Progress'
-    DONE = 'Done'
+    Pending = 'Pending'
+    In_Progress = 'In Progress'
+    Done = 'Done'
 
 
 

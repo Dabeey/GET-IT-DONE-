@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Project - Get It Done!{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Add New Project</h1>
+    <form method="POST" action="{{ url_for('add_project') }}" class="shadow-lg p-4 bg-white rounded">
+        {{ form.hidden_tag() }} <!-- CSRF Token -->
+        <div class="mb-3">
+            <label for="project_name" class="form-label">Project Name</label>
+            <input type="text" class="form-control" id="project_name" name="project_name" required>
+        </div>
+        <div class="mb-3">
+            <label for="project_description" class="form-label">Description</label>
+            <textarea class="form-control" id="project_description" name="project_description"></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="project_deadline" class="form-label">Deadline</label>
+            <input type="date" class="form-control" id="project_deadline" name="project_deadline">
+        </div>
+        <button type="submit" class="btn btn-gradient-primary btn-lg w-100">Add Project</button>
+    </form>
+</div>
+{% endblock %}
