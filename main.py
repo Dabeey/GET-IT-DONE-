@@ -224,13 +224,14 @@ def add_project():
 @app.route('/project/<int:project_id>/tasks')
 @login_required
 def project_tasks(project_id):
+    form = BaseForm()
     project = Project.query.get_or_404(project_id)
     if project.owner_id != current_user.id:
         flash("You don't have permission to view this project's tasks.", 'danger')
         return redirect(url_for('projects'))
 
     tasks = Task.query.filter_by(project_id=project_id).order_by(Task.updated_at.desc()).all()
-    return render_template('tasks.html', tasks=tasks, project=project)
+    return render_template('tasks.html', tasks=tasks, project=project, form=form)
 
 @app.route('/edit_project/<int:project_id>', methods=['GET', 'POST'])
 @login_required
@@ -297,7 +298,7 @@ def tasks():
 @app.route('/add_task', methods=['GET', 'POST'])
 @login_required
 def add_task():
-    form = BaseForm()
+    form = BaseForm()  # Initialize the form
     projects = Project.query.filter_by(owner_id=current_user.id).all()
 
     # Get enum values for priorities and statuses
