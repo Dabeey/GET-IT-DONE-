@@ -236,6 +236,7 @@ def project_tasks(project_id):
 @app.route('/edit_project/<int:project_id>', methods=['GET', 'POST'])
 @login_required
 def edit_project(project_id):
+    form = BaseForm()
     project = Project.query.get_or_404(project_id)
     if project.owner_id != current_user.id:
         flash("You don't have permission to edit this project.", 'danger')
@@ -244,7 +245,18 @@ def edit_project(project_id):
     if request.method == 'POST':
         project.name = request.form.get('project_name')
         project.description = request.form.get('project_description')
-        project.deadline = request.form.get('project_deadline')
+        project_deadline_str = request.form.get('project_deadline')
+
+        # Convert deadline to None if empty, otherwise parse it as a datetime
+        if project_deadline_str:
+            try:
+                project.deadline = datetime.strptime(project_deadline_str, '%Y-%m-%d')
+            except ValueError:
+                flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+                return redirect(url_for('edit_project', project_id=project_id))
+        else:
+            project.deadline = None  # Set to None if no deadline is provided
+
         project.updated_at = get_current_timestamp()
 
         if not project.name:
@@ -260,7 +272,7 @@ def edit_project(project_id):
             flash(f'An error occurred: {str(e)}', 'danger')
         return redirect(url_for('index'))
 
-    return render_template('edit_project.html', project=project)
+    return render_template('edit_project.html', project=project, form=form)
 
 
 
@@ -380,34 +392,54 @@ def add_task():
 @app.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
 @login_required
 def edit_task(task_id):
+    form = BaseForm()  # Initialize the form
     task = Task.query.get_or_404(task_id)
     if task.user_id != current_user.id:
         flash("You don't have permission to edit this task.", 'danger')
         return redirect(url_for('index'))
 
-    if request.method == 'POST':
+    # Get enum values for priorities and statuses
+    priorities = list(PriorityLevel)
+    statuses = list(TaskStatus)
+
+    if request.method == 'POST' and form.validate_on_submit():
+        # Get form data
         task.title = request.form.get('title')
         task.description = request.form.get('description')
-        task.due_date = request.form.get('due_date')
-        task.priority = request.form.get('priority')
-        task.status = request.form.get('status')
+        task_deadline_str = request.form.get('due_date')
+        task.priority = PriorityLevel(request.form.get('priority').title())  # Convert to enum
+        task.status = TaskStatus(request.form.get('status').title())        # Convert to enum
+        task.updated_at = datetime.utcnow()
+
+        if task_deadline_str:
+            try:
+                task.due_date = datetime.strptime(project_deadline_str, '%Y-%m-%d')
+            except ValueError:
+                flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+                return redirect(url_for('edit_project', project_id=project_id))
+        else:
+            task.due_date = None  # Set to None if no deadline is provided
+
         task.updated_at = get_current_timestamp()
 
+
+        # Validate required fields
         if not task.title:
             flash('Task title is required.', 'danger')
-            return redirect(url_for('edit_task', task_id=task_id))
+            return render_template('edit_task.html', form=form, task=task, priorities=priorities, statuses=statuses)
 
         try:
+            # Commit changes to the database
             db.session.commit()
             flash('Task updated successfully!', 'success')
+            return redirect(url_for('project_tasks', project_id=task.project_id))
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error updating task: {str(e)}")
-            flash(f'An error occurred: {str(e)}', 'danger')
-        return redirect(url_for('index'))
+            flash('An error occurred while updating the task. Please try again.', 'danger')
 
-    return render_template('edit_task.html', task=task)
-
+    # Render the form for GET requests
+    return render_template('edit_task.html', form=form, task=task, priorities=priorities, statuses=statuses)
 
 
 @app.route('/delete_task/<int:task_id>', methods=['POST'])

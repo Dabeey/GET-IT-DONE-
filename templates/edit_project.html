@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Project - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Edit Project</h1>
+    <form method="POST" action="{{ url_for('edit_project', project_id=project.id) }}" class="shadow-lg p-4 bg-white rounded">
+        {{ form.hidden_tag() }} <!-- CSRF Token -->
+
+        <!-- Project Name -->
+        <div class="form-group mb-3">
+            <label for="project_name" class="form-label">Project Name*</label>
+            <input type="text" id="project_name" name="project_name" class="form-control" value="{{ project.name }}" required>
+        </div>
+
+        <!-- Project Description -->
+        <div class="form-group mb-3">
+            <label for="project_description" class="form-label">Description</label>
+            <textarea id="project_description" name="project_description" class="form-control">{{ project.description }}</textarea>
+        </div>
+
+        <!-- Project Deadline -->
+        <div class="form-group mb-3">
+            <label for="project_deadline" class="form-label">Deadline</label>
+            <input type="date" id="project_deadline" name="project_deadline" class="form-control" value="{{ project.deadline }}">
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+    </form>
+</div>
+{% endblock %}
