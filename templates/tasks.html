@@ -3,49 +3,26 @@
 {% block title %}Tasks - Get It Done!{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4 text-center">
-        {% if project %}
-        Tasks for Project: {{ project.name }}
-        {% else %}
-        All Tasks
-        {% endif %}
-    </h1>
-    <a href="{{ url_for('add_task') }}" class="btn btn-primary mb-4">Add New Task</a>
-
-    {% if tasks %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Title</th>
-                <th>Description</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Due Date</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for task in tasks %}
-            <tr>
-                <td>{{ task.title }}</td>
-                <td>{{ task.description or "No description" }}</td>
-                <td>{{ task.priority.value }}</td>
-                <td>{{ task.status.value }}</td>
-                <td>{{ task.due_date or "No due date" }}</td>
-                <td>
-                    <a href="{{ url_for('edit_task', task_id=task.id) }}" class="btn btn-sm btn-primary">Edit</a>
-                    <form method="POST" action="{{ url_for('delete_task', task_id=task.id) }}" class="d-inline">
-                        {{ form.hidden_tag() }}
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="alert alert-info text-center">No tasks available. Add a new task to get started!</div>
-    {% endif %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Tasks</h1>
+    <ul class="list-group">
+        {% for task in tasks %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ task.title }}</strong>
+                <p class="mb-0 text-muted">{{ task.description or "No description" }}</p>
+                <small>Due: {{ task.due_date or "No due date" }}</small>
+            </div>
+            <div>
+                <form method="POST" action="{{ url_for('complete_task', task_id=task.id) }}" class="d-inline">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="btn btn-sm {% if task.status.value == 'Done' %}btn-success{% else %}btn-outline-success{% endif %}">
+                        {% if task.status.value == 'Done' %}Completed{% else %}Mark as Complete{% endif %}
+                    </button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
 </div>
 {% endblock %}

@@ -172,9 +172,10 @@ def index():
 @app.route('/projects')
 @login_required
 def projects():
+    form  = BaseForm()
     projects = Project.query.filter_by(owner_id=current_user.id).order_by(Project.created_at.desc()).all()
     
-    return render_template('projects.html', projects=projects)
+    return render_template('projects.html', projects=projects, form=form)
 
 
 @app.route('/add_project', methods=['GET','POST'])
@@ -270,7 +271,7 @@ def edit_project(project_id):
             db.session.rollback()
             logging.error(f"Error updating project: {str(e)}")
             flash(f'An error occurred: {str(e)}', 'danger')
-        return redirect(url_for('index'))
+        return redirect(url_for('project_tasks', project_id=project_id))
 
     return render_template('edit_project.html', project=project, form=form)
 
@@ -292,8 +293,7 @@ def delete_project(project_id):
         db.session.rollback()
         logging.error(f"Error deleting project: {str(e)}")
         flash(f'An error occurred: {str(e)}', 'danger')
-    return redirect(url_for('index'))
-
+    return redirect(url_for('projects'))
 
 
 
@@ -310,10 +310,9 @@ def tasks():
 @app.route('/add_task', methods=['GET', 'POST'])
 @login_required
 def add_task():
-    form = BaseForm()  # Initialize the form
+    form = BaseForm()
     projects = Project.query.filter_by(owner_id=current_user.id).all()
 
-    # Get enum values for priorities and statuses
     priorities = list(PriorityLevel)
     statuses = list(TaskStatus)
 
@@ -324,46 +323,22 @@ def add_task():
         task_priority = request.form.get('priority').title()
         task_status = request.form.get('status').title()
         project_id = request.form.get('project_id')
-
-        # Debug logs
-        logging.debug(f"Task Title: {task_title}")
-        logging.debug(f"Task Description: {task_description}")
-        logging.debug(f"Task Due Date: {task_due_date_str}")
-        logging.debug(f"Task Priority: {task_priority}")
-        logging.debug(f"Task Status: {task_status}")
-        logging.debug(f"Project ID: {project_id}")
-
+        
         # Normalize input
         task_priority = task_priority.title() if task_priority else None
         task_status = task_status.title() if task_status else None
 
-        # Validate required fields
-        if not task_title:
-            flash('Task title is required.', 'danger')
-            return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
-
-        if not task_due_date_str:
-            flash('Due date is required.', 'danger')
-            return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
-
-        if not project_id:
-            flash('Project selection is required.', 'danger')
-            return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
-
-        # Convert and validate due date
         try:
             task_due_date = datetime.strptime(task_due_date_str, '%Y-%m-%d')
         except ValueError:
             flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
             return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
 
-        # Validate project exists
         project = Project.query.get(project_id)
         if not project:
             flash('Selected project does not exist.', 'danger')
             return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
 
-        # Create and save task
         try:
             new_task = Task(
                 title=task_title,
@@ -379,13 +354,12 @@ def add_task():
             db.session.add(new_task)
             db.session.commit()
             flash('Task created successfully!', 'success')
-            return redirect(url_for('tasks'))
+            return redirect(url_for('project_tasks', project_id=project_id))
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error creating task: {str(e)}")
             flash('An error occurred while creating the task. Please try again.', 'danger')
 
-    # Render the form for GET requests
     return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
 
 
@@ -413,15 +387,14 @@ def edit_task(task_id):
 
         if task_deadline_str:
             try:
-                task.due_date = datetime.strptime(project_deadline_str, '%Y-%m-%d')
+                task.due_date = datetime.strptime(task_deadline_str, '%Y-%m-%d')
             except ValueError:
                 flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
-                return redirect(url_for('edit_project', project_id=project_id))
+                return redirect(url_for('edit_task', task_id=task_id))
         else:
             task.due_date = None  # Set to None if no deadline is provided
 
         task.updated_at = get_current_timestamp()
-
 
         # Validate required fields
         if not task.title:

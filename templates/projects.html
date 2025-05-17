@@ -4,32 +4,34 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h1 class="text-center mb-4">My Projects</h1>
-    <div class="text-end mb-4">
-        <a href="{{ url_for('add_project') }}" class="btn btn-gradient-primary btn-lg">Add New Project</a>
-    </div>
-
-    {% if projects %}
-    <div class="row">
+    <h1 class="text-center mb-4">Projects</h1>
+    <div class="accordion" id="projectsAccordion">
         {% for project in projects %}
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-gradient-primary text-white">
-                    <h5 class="mb-0">{{ project.name }}</h5>
-                </div>
-                <div class="card-body">
-                    <p>{{ project.description or "No description available." }}</p>
-                    <p><strong>Deadline:</strong> {{ project.deadline or "No deadline set." }}</p>
-                </div>
-                <div class="card-footer text-end">
-                    <a href="{{ url_for('project_tasks', project_id=project.id) }}" class="btn btn-sm btn-primary">View Tasks</a>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading{{ project.id }}">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ project.id }}" aria-expanded="true" aria-controls="collapse{{ project.id }}">
+                    {{ project.name }}
+                </button>
+            </h2>
+            <div id="collapse{{ project.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ project.id }}" data-bs-parent="#projectsAccordion">
+                <div class="accordion-body">
+                    <p>{{ project.description or "No description" }}</p>
+                    <ul class="list-group">
+                        {% for task in project.tasks[:5] %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ task.title }}
+                            <form method="POST" action="{{ url_for('complete_task', task_id=task.id) }}" class="d-inline">
+                                {{ form.hidden_tag() }}
+                                <input type="checkbox" {% if task.status.value == 'Done' %}checked{% endif %} onclick="this.form.submit();">
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{{ url_for('project_tasks', project_id=project.id) }}" class="btn btn-link mt-2">View All Tasks</a>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-    {% else %}
-    <div class="alert alert-info text-center">No projects available. Add a new project to get started!</div>
-    {% endif %}
 </div>
 {% endblock %}

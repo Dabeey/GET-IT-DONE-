@@ -60,8 +60,19 @@ body {
 
 .btn-primary:hover {
     background: linear-gradient(135deg, #2575fc, #6a11cb);
-    transform: translateY(-2px);
-    
+    transform: translateY(-2px);    
+}
+
+.btn-light{
+    background: linear-gradient(135deg, #2575fc, #6a11cb);
+    color: #fff; 
+
+}
+
+.btn-light:hover {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    transform: translateY(-1px);
+    color: #fff; 
 }
 
 /* Green Gradient Button */
