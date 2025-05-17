@@ -112,25 +112,39 @@ def logout():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    # Check if a message was passed via query parameters
+    message = request.args.get('message')
+    if message:
+        flash(message, 'danger')
+
     if request.method == 'POST':
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
 
+        # Validate inputs
         if not username or not email or not password:
             flash('All fields are required!', 'danger')
             return redirect(url_for('register'))
 
+        # Check if email is already registered
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash('Email already registered! Login Instead', 'danger')
+            flash('Email already registered! Please log in instead.', 'danger')
             return redirect(url_for('login'))
 
-        new_user = User(username=username, email=email, password=password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('Registration successful! You can now log in.', 'success')
-        return redirect(url_for('login'))
+        try:
+            # Create a new user
+            new_user = User(username=username, email=email)
+            new_user.set_password(password)  # Hash the password
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful! You can now log in.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error during registration: {str(e)}")
+            flash('An error occurred during registration. Please try again.', 'danger')
 
     return render_template('register.html')
 
@@ -237,6 +251,12 @@ def delete_project(project_id):
 
 
 ############### EVERYTHING TASK ############################
+@app.route('/tasks')
+@login_required
+def tasks():
+    tasks = Task.query.filter_by(user_id=current_user.id).order_by(Task.due_date.asc()).all()
+    return render_template('tasks.html', tasks=tasks)
+
 
 @app.route('/add_task', methods=['POST'])
 @login_required
@@ -390,6 +410,24 @@ def view_task(task_id):
 
 
 
+############################## USER #################
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        # Update user profile
+        current_user.username = request.form.get('username')
+        current_user.email = request.form.get('email')
+        try:
+            db.session.commit()
+            flash('Profile updated successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred while updating your profile.', 'danger')
+    return render_template('profile.html', user=current_user)
+
+
 @app.route('/search', methods=['GET'])
 @login_required
 def search():
@@ -436,6 +474,24 @@ def export_data():
     )
 
 
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if request.method == 'POST':
+        # Update user settings
+        new_password = request.form.get('password')
+        if new_password:
+            current_user.set_password(new_password)
+            try:
+                db.session.commit()
+                flash('Settings updated successfully!', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash('An error occurred while updating your settings.', 'danger')
+        else:
+            flash('Password cannot be empty.', 'danger')
+    return render_template('settings.html')
+
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True, use_reloader=True)

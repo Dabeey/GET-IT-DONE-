@@ -1,53 +1,73 @@
 {% extends 'base.html' %}
 
-{% block title %}My Tasks - Get It Done!{% endblock %}
+{% block title %}Dashboard - Get It Done!{% endblock %}
 
 {% block content %}
+<div class="container text-center">
+    <div class="hero-section py-5 text-white">
+        <h1 class="display-4 fw-bold">Welcome to Get It Done!</h1>
+        <p class="lead">Your ultimate task and project management tool.</p>
+        <a href="{{ url_for('projects') }}" class="btn btn-lg btn-primary me-2">View Projects</a>
+        <a href="{{ url_for('tasks') }}" class="btn btn-lg btn-outline-light">View All Tasks</a>
+    </div>
 
-<div class="container">
-    <h1 class="mb-4">My projects</h1>
-
-    {% if projects|length == 0 %}
-    <div class="accordion" id="projectsAccordion">
-        {% for project in projects %}
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="heading{{ project.id }}">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-targert="#collapse{{ project.id}}" aria-expanded="false" aria-controls="collapsed{{ project.id }}">
-                    {{ project.name }}
-                </button>
-            </h2>
-
-            <div id="collapse{{ project.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ project.id }}" data-bs-parent="#projectsAccordion">
-                <div class="accordion-body">
-                    {% if project.tasks|length > 0 %}
-                    <div class="row">
-                        {% for task in project.tasks %}
-                        <div class="col-md-4 mb-4">
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ task.title }}</h5>
-                                    <p class="card-text">{{ task.description }}</p>
-                                    <span class="badge bg-{{ 'danger' if task.priority == 'High' else 'warning' if task.priority == 'Medium' else 'success' }}">
-                                        {{ task.priority }}
-                                    </span>
-                                    <p class="text-muted mt-2">Due: {{ task.due_date.strftime('%Y-%m-%d') }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="text-muted">No tasks available for this project.</p>
-                    {% endif %}
+    <div class="stats-section row mt-5">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Tasks</h5>
+                    <p class="display-6 fw-bold text-primary">{{ tasks|length }}</p>
+                    <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-primary">Manage Tasks</a>
                 </div>
             </div>
         </div>
-        {% endfor %}
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Completed Tasks</h5>
+                    <p class="display-6 fw-bold text-success">{{ completed_tasks }}</p>
+                    <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-success">View Completed</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Pending Tasks</h5>
+                    <p class="display-6 fw-bold text-danger">{{ pending_tasks }}</p>
+                    <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-danger">View Pending</a>
+                </div>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <div class="alert alert-info" role="alert">
-        No projects available. Please add some projects to get started!
+
+    <div class="projects-section mt-5">
+        <h2 class="mb-4 text-center">Your Projects</h2>
+        {% if projects|length > 0 %}
+        <div class="row">
+            {% for project in projects %}
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">{{ project.name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">{{ project.description or "No description available." }}</p>
+                        <p><strong>Tasks:</strong> {{ project.tasks|length }}</p>
+                        <a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                        <form method="POST" action="{{ url_for('delete_project', project_id=project.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            No projects available. Start by creating a new project!
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endblock %}

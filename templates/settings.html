@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - Get It Done!{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4 text-center">Account Settings</h1>
+    <form method="POST" action="{{ url_for('settings') }}">
+        <div class="mb-3">
+            <label for="password" class="form-label">New Password</label>
+            <input type="password" class="form-control" id="password" name="password" placeholder="Enter new password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Settings</button>
+    </form>
+</div>
+{% endblock %}

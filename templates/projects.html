@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Projects - Get It Done!{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4 text-center">My Projects</h1>
+
+    {% if projects|length > 0 %}
+    <div class="row">
+        {% for project in projects %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ project.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">{{ project.description or "No description available." }}</p>
+                    <p><strong>Created At:</strong> {{ project.created_at.strftime('%Y-%m-%d') }}</p>
+                    <p><strong>Tasks:</strong> {{ project.tasks|length }}</p>
+                </div>
+                <div class="card-footer text-end">
+                    <a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                    <form method="POST" action="{{ url_for('delete_project', project_id=project.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center" role="alert">
+        No projects available. Start by creating a new project!
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

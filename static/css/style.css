@@ -1,4 +1,5 @@
-body {
+/* Login Section Styling */
+.login-body {
     background: linear-gradient(135deg, #6a11cb, #2575fc);
     height: 100vh;
     display: flex;
@@ -7,6 +8,7 @@ body {
     font-family: 'Poppins', sans-serif;
     margin: 0;
 }
+
 .login-container {
     background: #ffffff;
     padding: 2.5rem;
@@ -16,26 +18,32 @@ body {
     max-width: 400px;
     text-align: center;
 }
+
 .login-container h1 {
     font-size: 2rem;
     font-weight: bold;
     margin-bottom: 1.5rem;
     color: #333;
 }
+
 .login-container p {
     font-size: 0.9rem;
     color: #666;
     margin-bottom: 2rem;
 }
+
 .form-control {
     border-radius: 10px;
     padding: 0.75rem;
     font-size: 1rem;
+    border: 1px solid #ddd;
 }
+
 .form-control:focus {
     border-color: #6a11cb;
     box-shadow: 0 0 0 0.2rem rgba(106, 17, 203, 0.25);
 }
+
 .btn-primary {
     background: linear-gradient(135deg, #6a11cb, #2575fc);
     border: none;
@@ -45,20 +53,78 @@ body {
     width: 100%;
     transition: all 0.3s ease;
 }
+
 .btn-primary:hover {
     background: linear-gradient(135deg, #2575fc, #6a11cb);
     transform: translateY(-2px);
 }
+
 .footer-text {
     margin-top: 1.5rem;
     font-size: 0.9rem;
     color: #666;
 }
+
 .footer-text a {
     color: #6a11cb;
     text-decoration: none;
     font-weight: bold;
 }
+
 .footer-text a:hover {
     text-decoration: underline;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    border-radius: 15px;
+    padding: 3rem;
+    margin-bottom: 2rem;
+}
+
+/* Stats Section */
+.stats-section .card {
+    border-radius: 15px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stats-section .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Projects Section */
+.projects-section .card {
+    border-radius: 15px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.projects-section .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #2575fc, #6a11cb);
+    transform: translateY(-2px);
+}
+
+.btn-outline-light {
+    border: 2px solid #fff;
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+    background: #fff;
+    color: #2575fc;
+    border-color: #fff;
 }
