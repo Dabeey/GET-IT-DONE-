@@ -30,8 +30,8 @@
             <tr>
                 <td>{{ task.title }}</td>
                 <td>{{ task.description or "No description" }}</td>
-                <td>{{ task.priority }}</td>
-                <td>{{ task.status }}</td>
+                <td>{{ task.priority.value }}</td>
+                <td>{{ task.status.value }}</td>
                 <td>{{ task.due_date or "No due date" }}</td>
                 <td>
                     <a href="{{ url_for('edit_task', task_id=task.id) }}" class="btn btn-sm btn-primary">Edit</a>
