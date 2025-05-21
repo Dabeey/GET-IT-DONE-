@@ -1,7 +1,7 @@
 from flask import Flask,render_template,Response, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy import inspect
 from models import db, Task, User, Project, PriorityLevel, TaskStatus
 from flask_login import current_user, login_required, LoginManager, UserMixin
@@ -335,43 +335,47 @@ def delete_project(project_id):
 
 
 ############### EVERYTHING TASK ############################
+from sqlalchemy.sql import extract
+
 @app.route('/tasks', methods=['GET'])
 @login_required
 def tasks():
+    form = BaseForm()
     filter_type = request.args.get('filter', 'all')
     tasks_query = Task.query.filter_by(user_id=current_user.id)
 
-    # Filter tasks based on the filter type
     if filter_type == 'today':
-        today = datetime.utcnow().date()
-        tasks = tasks_query.filter(Task.due_date == today).all()
+        tasks = tasks_query.filter(Task.due_date == date.today()).all()
     elif filter_type == 'week':
-        today = datetime.utcnow().date()
-        end_of_week = today + timedelta(days=7)
-        tasks = tasks_query.filter(Task.due_date >= today, Task.due_date <= end_of_week).all()
+        start_of_week = date.today() - timedelta(days=date.today().weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        tasks = tasks_query.filter(Task.due_date.between(start_of_week, end_of_week)).all()
     elif filter_type == 'month':
-        today = datetime.utcnow().date()
-        end_of_month = today + timedelta(days=30)
-        tasks = tasks_query.filter(Task.due_date >= today, Task.due_date <= end_of_month).all()
+        tasks = tasks_query.filter(extract('month', Task.due_date) == date.today().month).all()
     elif filter_type == 'pending':
-        tasks = tasks_query.filter(Task.status == TaskStatus.Pending).all()
+        tasks = tasks_query.filter_by(status=TaskStatus.Pending).all()
+    elif filter_type == 'ongoing':
+        tasks = tasks_query.filter_by(status=TaskStatus.In_Progress).all()
     elif filter_type == 'completed':
-        tasks = tasks_query.filter(Task.status == TaskStatus.Done).all()
+        tasks = tasks_query.filter_by(status=TaskStatus.Done).all()
+    elif filter_type == 'overdue':
+        tasks = tasks_query.filter(Task.due_date < date.today(), Task.status != TaskStatus.Done).all()
     else:
         tasks = tasks_query.all()
 
-    # Categorize tasks
-    today = datetime.utcnow().date()
-    tasks_due_today = tasks_query.filter(Task.due_date == today).all()
-    tasks_this_week = tasks_query.filter(Task.due_date >= today, Task.due_date <= today + timedelta(days=7)).all()
-    tasks_this_month = tasks_query.filter(Task.due_date >= today, Task.due_date <= today + timedelta(days=30)).all()
+    # Calculate progress counts
+    pending_count = tasks_query.filter_by(status=TaskStatus.Pending).count()
+    ongoing_count = tasks_query.filter_by(status=TaskStatus.In_Progress).count()
+    completed_count = tasks_query.filter_by(status=TaskStatus.Done).count()
 
     return render_template(
         'tasks.html',
-        tasks_due_today=tasks_due_today,
-        tasks_this_week=tasks_this_week,
-        tasks_this_month=tasks_this_month,
-        form=BaseForm()
+        tasks=tasks,
+        filter_type=filter_type,
+        pending_count=pending_count,
+        ongoing_count=ongoing_count,
+        completed_count=completed_count,
+        form=form
     )
 
 
@@ -527,6 +531,29 @@ def edit_task(task_id):
 
     return render_template('edit_task.html', form=form, task=task, priorities=priorities, statuses=statuses)
 
+@app.route('/update_task_status/<int:task_id>', methods=['POST'])
+@login_required
+def update_task_status(task_id):
+    task = Task.query.get_or_404(task_id)
+    if task.user_id != current_user.id:
+        return jsonify({"success": False, "message": "You don't have permission to update this task."}), 403
+
+    data = request.json
+    new_status = data.get('status')
+
+    if new_status not in [status.value for status in TaskStatus]:
+        return jsonify({"success": False, "message": "Invalid status."}), 400
+
+    try:
+        task.status = TaskStatus(new_status)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Task status updated successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error updating task status: {str(e)}")
+        return jsonify({"success": False, "message": "An error occurred while updating the task status."}), 500
+
+        
 
 @csrf.exempt
 @app.route('/delete_task/<int:task_id>', methods=['POST'])
@@ -539,6 +566,8 @@ def delete_task(task_id):
     try:
         db.session.delete(task)
         db.session.commit()
+        flash('Task deleted successfully!', 'success')
+        # Optionally, you can redirect to the project tasks page
         return jsonify({"success": True, "message": "Task deleted successfully."}), 200
     except Exception as e:
         db.session.rollback()
