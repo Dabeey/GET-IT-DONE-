@@ -4,34 +4,65 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h1 class="text-center mb-4">Projects</h1>
-    <div class="accordion" id="projectsAccordion">
+    <h1 class="text-center mb-4">Your Projects</h1>
+
+    <!-- Create New Project Button -->
+    <div class="text-end mb-4">
+        <a href="{{ url_for('add_project') }}" class="btn btn-primary">Create New Project</a>
+    </div>
+
+    <!-- Projects List -->
+    {% if projects|length > 0 %}
+    <div class="row g-4">
         {% for project in projects %}
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="heading{{ project.id }}">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ project.id }}" aria-expanded="true" aria-controls="collapse{{ project.id }}">
-                    {{ project.name }}
-                </button>
-            </h2>
-            <div id="collapse{{ project.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ project.id }}" data-bs-parent="#projectsAccordion">
-                <div class="accordion-body">
-                    <p>{{ project.description or "No description" }}</p>
-                    <ul class="list-group">
-                        {% for task in project.tasks[:5] %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ task.title }}
-                            <form method="POST" action="{{ url_for('complete_task', task_id=task.id) }}" class="d-inline">
-                                {{ form.hidden_tag() }}
-                                <input type="checkbox" {% if task.status.value == 'Done' %}checked{% endif %} onclick="this.form.submit();">
-                            </form>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    <a href="{{ url_for('project_tasks', project_id=project.id) }}" class="btn btn-link mt-2">View All Tasks</a>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 project-card" onclick="openProjectDetails({{ project.id }})">
+                <div class="card-body text-center">
+                    <!-- Circular Progress Ring -->
+                    <div class="progress-ring mb-3">
+                        {% set completed_tasks = project.tasks|selectattr('status', 'equalto', TaskStatus.Done)|list %}
+                        {% set total_tasks = project.tasks|length %}
+                        {% set progress = (completed_tasks|length / total_tasks * 100) if total_tasks > 0 else 0 %}
+                        <svg class="progress-ring-svg" width="80" height="80">
+                            <circle class="progress-ring-bg" cx="40" cy="40" r="35"></circle>
+                            <circle class="progress-ring-fg" cx="40" cy="40" r="35" style="stroke-dasharray: 220; stroke-dashoffset: {{ 220 - (progress / 100 * 220) }};"></circle>
+                        </svg>
+                        <div class="progress-ring-text">{{ progress|round(0) }}%</div>
+                    </div>
+
+                    <!-- Project Name -->
+                    <h5 class="card-title">{{ project.name }}</h5>
+
+                    <!-- Task Count -->
+                    <p class="card-text text-muted">{{ total_tasks }} tasks</p>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <div class="alert alert-info text-center" role="alert">
+        No projects available. Start by creating a new project!
+    </div>
+    {% endif %}
 </div>
+
+<!-- Slide-In Panel for Project Details -->
+<div id="project-details-panel" class="project-details-panel">
+    <div class="panel-header">
+        <h5 id="project-details-title"></h5>
+        <button class="btn-close" onclick="closeProjectDetails()">&times;</button>
+    </div>
+    <div class="panel-body">
+        <ul id="project-tasks-list" class="list-group"></ul>
+        <a id="add-task-link" href="#" class="btn btn-primary w-100 mt-3">Add New Task</a>
+        <button id="delete-project-btn" class="btn btn-danger w-100 mt-3" onclick="deleteProject()">Delete Project</button>
+    </div>
+</div>
+
+<!-- Pass serialized projects to JavaScript -->
+<script id="serialized-projects" type="application/json">{{ serialized_projects|tojson }}</script>
+
+<!-- Include external JavaScript -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% endblock %}

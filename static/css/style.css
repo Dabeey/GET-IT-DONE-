@@ -1,5 +1,42 @@
+/* toogle theme for the app */
+/* Default Light Theme */
 body {
+    background-color: #ffffff;
+    color: #000000;
     padding-top: 70px; 
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Dark Theme */
+body.dark-theme {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+/* Example for cards in dark mode */
+.card {
+    background-color: #f8f9fa;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+body.dark-theme .card {
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+/* Example for buttons in dark mode */
+.btn {
+    transition: background-color 0.3s, color 0.3s;
+}
+
+body.dark-theme .btn-primary {
+    background-color: #4caf50;
+    border-color: #4caf50;
+}
+
+body.dark-theme .btn-outline-secondary {
+    color: #ffffff;
+    border-color: #ffffff;
 }
 
 /* Login Section Styling */
@@ -197,3 +234,95 @@ body {
     color: #2575fc;
     border-color: #fff;
 }
+
+
+    /* Task Dropdown */
+    .task-dropdown {
+        display: flex;
+        align-items: center;
+    }
+    .task-dropdown input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    .task-dropdown i {
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    /* Circular Progress Ring */
+    .progress-ring {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        margin: 0 auto;
+    }
+    .progress-ring-svg {
+        transform: rotate(-90deg);
+    }
+    .progress-ring-bg {
+        fill: none;
+        stroke: #e6e6e6;
+        stroke-width: 5;
+    }
+    .progress-ring-fg {
+        fill: none;
+        stroke: #007bff;
+        stroke-width: 5;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.3s ease;
+    }
+    .progress-ring-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    /* Slide-In Panel */
+    .project-details-panel {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 300px;
+        height: 100%;
+        background: #fff;
+        box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+        transition: right 0.3s ease;
+        z-index: 1050;
+    }
+    .project-details-panel.open {
+        right: 0;
+    }
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #e6e6e6;
+    }
+    .panel-body {
+        padding: 1rem;
+    }
+
+    /* Dark Theme */
+    .dark-theme {
+        background-color: #121212;
+        color: #ffffff;
+    }
+    .dark-theme .card {
+        background-color: #1e1e1e;
+        color: #ffffff;
+    }
+    .dark-theme .progress-ring-bg {
+        stroke: #444;
+    }
+    .dark-theme .progress-ring-fg {
+        stroke: #4caf50;
+    }
+
+

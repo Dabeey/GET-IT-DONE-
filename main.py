@@ -1,7 +1,7 @@
-from flask import Flask, render_template,Response, request, redirect, url_for
+from flask import Flask,render_template,Response, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import inspect
 from models import db, Task, User, Project, PriorityLevel, TaskStatus
 from flask_login import current_user, login_required, LoginManager, UserMixin
@@ -162,20 +162,58 @@ def register():
 @app.route('/')
 @login_required
 def index():
-    projects = Project.query.order_by(Project.created_at.desc()).all()
-    return render_template('index.html', projects=projects)
+    tasks = Task.query.filter_by(user_id=current_user.id).all()
+    total_tasks = len(tasks)
+    completed_tasks = len([task for task in tasks if task.status == TaskStatus.Done])
+    pending_tasks = total_tasks - completed_tasks
+    projects = Project.query.filter_by(owner_id=current_user.id).all()
 
+    return render_template(
+        'index.html',
+        total_tasks=total_tasks,
+        completed_tasks=completed_tasks,
+        pending_tasks=pending_tasks,
+        projects=projects,
+        tasks = tasks
+    )
 
 
 ######################## EVERYTHING PROJECTS #########################
+def serialize_project(project):
+    return {
+        "id": project.id,
+        "name": project.name,
+        "tasks": [
+            {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status.value,
+                "due_date": task.due_date.strftime('%Y-%m-%d') if task.due_date else None
+            }
+            for task in project.tasks
+        ]
+    }
 
-@app.route('/projects')
+
+@app.route('/projects', methods=['GET'])
 @login_required
 def projects():
-    form  = BaseForm()
-    projects = Project.query.filter_by(owner_id=current_user.id).order_by(Project.created_at.desc()).all()
-    
-    return render_template('projects.html', projects=projects, form=form)
+    projects = Project.query.filter_by(owner_id=current_user.id).all()
+
+    # Attach task data to each project
+    for project in projects:
+        project.tasks = Task.query.filter_by(project_id=project.id).all()
+
+    # Serialize projects for JSON
+    serialized_projects = [serialize_project(project) for project in projects]
+
+    return render_template(
+        'projects.html',
+        projects=projects,
+        serialized_projects=serialized_projects,
+        form=BaseForm(),
+        TaskStatus=TaskStatus
+    )
 
 
 @app.route('/add_project', methods=['GET','POST'])
@@ -276,35 +314,65 @@ def edit_project(project_id):
     return render_template('edit_project.html', project=project, form=form)
 
 
-
+@csrf.exempt
 @app.route('/delete_project/<int:project_id>', methods=['POST'])
 @login_required
 def delete_project(project_id):
     project = Project.query.get_or_404(project_id)
     if project.owner_id != current_user.id:
-        flash("You don't have permission to delete this project.", 'danger')
-        return redirect(url_for('index'))
+        return jsonify({"success": False, "message": "You don't have permission to delete this project."}), 403
 
     try:
         db.session.delete(project)
         db.session.commit()
-        flash('Project deleted successfully!', 'success')
+        return jsonify({"success": True, "message": "Project deleted successfully."}), 200
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error deleting project: {str(e)}")
-        flash(f'An error occurred: {str(e)}', 'danger')
-    return redirect(url_for('projects'))
-
+        return jsonify({"success": False, "message": "An error occurred while deleting the project."}), 500
+    
 
 
 
 ############### EVERYTHING TASK ############################
-@app.route('/tasks')
+@app.route('/tasks', methods=['GET'])
 @login_required
 def tasks():
-    form = BaseForm()
-    tasks = Task.query.filter_by(user_id=current_user.id).order_by(Task.due_date.asc()).all()
-    return render_template('tasks.html', tasks=tasks, form=form)
+    filter_type = request.args.get('filter', 'all')
+    tasks_query = Task.query.filter_by(user_id=current_user.id)
+
+    # Filter tasks based on the filter type
+    if filter_type == 'today':
+        today = datetime.utcnow().date()
+        tasks = tasks_query.filter(Task.due_date == today).all()
+    elif filter_type == 'week':
+        today = datetime.utcnow().date()
+        end_of_week = today + timedelta(days=7)
+        tasks = tasks_query.filter(Task.due_date >= today, Task.due_date <= end_of_week).all()
+    elif filter_type == 'month':
+        today = datetime.utcnow().date()
+        end_of_month = today + timedelta(days=30)
+        tasks = tasks_query.filter(Task.due_date >= today, Task.due_date <= end_of_month).all()
+    elif filter_type == 'pending':
+        tasks = tasks_query.filter(Task.status == TaskStatus.Pending).all()
+    elif filter_type == 'completed':
+        tasks = tasks_query.filter(Task.status == TaskStatus.Done).all()
+    else:
+        tasks = tasks_query.all()
+
+    # Categorize tasks
+    today = datetime.utcnow().date()
+    tasks_due_today = tasks_query.filter(Task.due_date == today).all()
+    tasks_this_week = tasks_query.filter(Task.due_date >= today, Task.due_date <= today + timedelta(days=7)).all()
+    tasks_this_month = tasks_query.filter(Task.due_date >= today, Task.due_date <= today + timedelta(days=30)).all()
+
+    return render_template(
+        'tasks.html',
+        tasks_due_today=tasks_due_today,
+        tasks_this_week=tasks_this_week,
+        tasks_this_month=tasks_this_month,
+        form=BaseForm()
+    )
 
 
 @app.route('/add_task', methods=['GET', 'POST'])
@@ -316,49 +384,83 @@ def add_task():
     priorities = list(PriorityLevel)
     statuses = list(TaskStatus)
 
-    if request.method == 'POST' and form.validate_on_submit():
-        task_title = request.form.get('title')
-        task_description = request.form.get('description', '')
-        task_due_date_str = request.form.get('due_date')
-        task_priority = request.form.get('priority').title()
-        task_status = request.form.get('status').title()
-        project_id = request.form.get('project_id')
-        
-        # Normalize input
-        task_priority = task_priority.title() if task_priority else None
-        task_status = task_status.title() if task_status else None
+    if request.method == 'POST':
+        # Handle JSON requests from app.js
+        if request.is_json:
+            data = request.json
+            task_title = data.get('title')
+            task_description = data.get('description', '')
+            task_due_date_str = data.get('due_date')
+            project_id = data.get('project_id')
 
-        try:
-            task_due_date = datetime.strptime(task_due_date_str, '%Y-%m-%d')
-        except ValueError:
-            flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
-            return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
+            if not task_title or not project_id:
+                return jsonify({"success": False, "message": "Task title and project ID are required."}), 400
 
-        project = Project.query.get(project_id)
-        if not project:
-            flash('Selected project does not exist.', 'danger')
-            return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
+            try:
+                task_due_date = datetime.strptime(task_due_date_str, '%Y-%m-%d') if task_due_date_str else None
+                project = Project.query.get(project_id)
+                if not project or project.owner_id != current_user.id:
+                    return jsonify({"success": False, "message": "Invalid project ID."}), 403
 
-        try:
-            new_task = Task(
-                title=task_title,
-                description=task_description,
-                due_date=task_due_date,
-                priority=PriorityLevel(task_priority),  # Convert string to enum
-                status=TaskStatus(task_status),        # Convert string to enum
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
-                user_id=current_user.id,
-                project_id=project_id
-            )
-            db.session.add(new_task)
-            db.session.commit()
-            flash('Task created successfully!', 'success')
-            return redirect(url_for('project_tasks', project_id=project_id))
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error creating task: {str(e)}")
-            flash('An error occurred while creating the task. Please try again.', 'danger')
+                new_task = Task(
+                    title=task_title,
+                    description=task_description,
+                    due_date=task_due_date,
+                    priority=PriorityLevel.Pending,  # Default priority
+                    status=TaskStatus.Pending,      # Default status
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                    user_id=current_user.id,
+                    project_id=project_id
+                )
+                db.session.add(new_task)
+                db.session.commit()
+                return jsonify({"success": True, "message": "Task added successfully."}), 201
+            except Exception as e:
+                db.session.rollback()
+                logging.error(f"Error adding task: {str(e)}")
+                return jsonify({"success": False, "message": "An error occurred while adding the task."}), 500
+
+        # Handle form submissions
+        if form.validate_on_submit():
+            task_title = request.form.get('title')
+            task_description = request.form.get('description', '')
+            task_due_date_str = request.form.get('due_date')
+            task_priority = request.form.get('priority').title()
+            task_status = request.form.get('status').title()
+            project_id = request.form.get('project_id')
+
+            try:
+                task_due_date = datetime.strptime(task_due_date_str, '%Y-%m-%d')
+            except ValueError:
+                flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+                return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
+
+            project = Project.query.get(project_id)
+            if not project:
+                flash('Selected project does not exist.', 'danger')
+                return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
+
+            try:
+                new_task = Task(
+                    title=task_title,
+                    description=task_description,
+                    due_date=task_due_date,
+                    priority=PriorityLevel(task_priority),
+                    status=TaskStatus(task_status),
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                    user_id=current_user.id,
+                    project_id=project_id
+                )
+                db.session.add(new_task)
+                db.session.commit()
+                flash('Task created successfully!', 'success')
+                return redirect(url_for('project_tasks', project_id=project_id))
+            except Exception as e:
+                db.session.rollback()
+                logging.error(f"Error creating task: {str(e)}")
+                flash('An error occurred while creating the task. Please try again.', 'danger')
 
     return render_template('add_task.html', form=form, projects=projects, priorities=priorities, statuses=statuses)
 
@@ -366,72 +468,82 @@ def add_task():
 @app.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
 @login_required
 def edit_task(task_id):
-    form = BaseForm()  # Initialize the form
+    form = BaseForm()
     task = Task.query.get_or_404(task_id)
     if task.user_id != current_user.id:
         flash("You don't have permission to edit this task.", 'danger')
         return redirect(url_for('index'))
 
-    # Get enum values for priorities and statuses
     priorities = list(PriorityLevel)
     statuses = list(TaskStatus)
 
-    if request.method == 'POST' and form.validate_on_submit():
-        # Get form data
-        task.title = request.form.get('title')
-        task.description = request.form.get('description')
-        task_deadline_str = request.form.get('due_date')
-        task.priority = PriorityLevel(request.form.get('priority').title())  # Convert to enum
-        task.status = TaskStatus(request.form.get('status').title())        # Convert to enum
-        task.updated_at = datetime.utcnow()
+    if request.method == 'POST':
+        # Handle JSON requests from app.js
+        if request.is_json:
+            data = request.json
+            task.title = data.get('title', task.title)
+            task_due_date_str = data.get('due_date')
 
-        if task_deadline_str:
+            if task_due_date_str:
+                try:
+                    task.due_date = datetime.strptime(task_due_date_str, '%Y-%m-%d')
+                except ValueError:
+                    return jsonify({"success": False, "message": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+            task.updated_at = datetime.utcnow()
+
             try:
-                task.due_date = datetime.strptime(task_deadline_str, '%Y-%m-%d')
-            except ValueError:
-                flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
-                return redirect(url_for('edit_task', task_id=task_id))
-        else:
-            task.due_date = None  # Set to None if no deadline is provided
+                db.session.commit()
+                return jsonify({"success": True, "message": "Task updated successfully."}), 200
+            except Exception as e:
+                db.session.rollback()
+                logging.error(f"Error updating task: {str(e)}")
+                return jsonify({"success": False, "message": "An error occurred while updating the task."}), 500
 
-        task.updated_at = get_current_timestamp()
+        # Handle form submissions
+        if form.validate_on_submit():
+            task.title = request.form.get('title')
+            task.description = request.form.get('description')
+            task_deadline_str = request.form.get('due_date')
+            task.priority = PriorityLevel(request.form.get('priority').title())
+            task.status = TaskStatus(request.form.get('status').title())
+            task.updated_at = datetime.utcnow()
 
-        # Validate required fields
-        if not task.title:
-            flash('Task title is required.', 'danger')
-            return render_template('edit_task.html', form=form, task=task, priorities=priorities, statuses=statuses)
+            if task_deadline_str:
+                try:
+                    task.due_date = datetime.strptime(task_deadline_str, '%Y-%m-%d')
+                except ValueError:
+                    flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+                    return redirect(url_for('edit_task', task_id=task_id))
 
-        try:
-            # Commit changes to the database
-            db.session.commit()
-            flash('Task updated successfully!', 'success')
-            return redirect(url_for('project_tasks', project_id=task.project_id))
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error updating task: {str(e)}")
-            flash('An error occurred while updating the task. Please try again.', 'danger')
+            try:
+                db.session.commit()
+                flash('Task updated successfully!', 'success')
+                return redirect(url_for('project_tasks', project_id=task.project_id))
+            except Exception as e:
+                db.session.rollback()
+                logging.error(f"Error updating task: {str(e)}")
+                flash('An error occurred while updating the task. Please try again.', 'danger')
 
-    # Render the form for GET requests
     return render_template('edit_task.html', form=form, task=task, priorities=priorities, statuses=statuses)
 
 
+@csrf.exempt
 @app.route('/delete_task/<int:task_id>', methods=['POST'])
 @login_required
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
     if task.user_id != current_user.id:
-        flash("You don't have permission to delete this task.", 'danger')
-        return redirect(url_for('index'))
+        return jsonify({"success": False, "message": "You don't have permission to delete this task."}), 403
 
     try:
         db.session.delete(task)
         db.session.commit()
-        flash('Task deleted successfully!', 'success')
+        return jsonify({"success": True, "message": "Task deleted successfully."}), 200
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error deleting task: {str(e)}")
-        flash(f'An error occurred: {str(e)}', 'danger')
-    return redirect(url_for('index'))
+        return jsonify({"success": False, "message": "An error occurred while deleting the task."}), 500
 
 
 
@@ -448,6 +560,7 @@ def complete_task(task_id):
         task.updated_at = get_current_timestamp()
         db.session.commit()
         flash('Task marked as complete!', 'success')
+        return redirect(url_for('project_tasks', project_id=task.project_id))
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error marking task as complete: {str(e)}")
