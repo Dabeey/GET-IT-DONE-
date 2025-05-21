@@ -531,6 +531,9 @@ def edit_task(task_id):
 
     return render_template('edit_task.html', form=form, task=task, priorities=priorities, statuses=statuses)
 
+
+
+@csrf.exempt
 @app.route('/update_task_status/<int:task_id>', methods=['POST'])
 @login_required
 def update_task_status(task_id):
@@ -552,8 +555,26 @@ def update_task_status(task_id):
         db.session.rollback()
         logging.error(f"Error updating task status: {str(e)}")
         return jsonify({"success": False, "message": "An error occurred while updating the task status."}), 500
-
         
+@csrf.exempt
+@app.route('/update_task_order', methods=['POST'])
+@login_required
+def update_task_order():
+    data = request.json
+    task_order = data.get('taskOrder', [])
+
+    try:
+        for task_data in task_order:
+            task = Task.query.get(task_data['id'])
+            if task and task.user_id == current_user.id:
+                task.order = task_data['order']
+        db.session.commit()
+        return jsonify({"success": True, "message": "Task order updated successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error updating task order: {str(e)}")
+        return jsonify({"success": False, "message": "An error occurred while updating the task order."}), 500
+    
 
 @csrf.exempt
 @app.route('/delete_task/<int:task_id>', methods=['POST'])
