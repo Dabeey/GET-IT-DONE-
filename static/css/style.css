@@ -326,3 +326,12 @@ body.dark-theme .btn-outline-secondary {
     }
 
 
+/* AI INTEGRATION */
+.list-group-item {
+    margin-bottom: 5px;
+}
+
+.input-group {
+    margin-top: 20px;
+}
+

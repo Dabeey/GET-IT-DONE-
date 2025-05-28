@@ -10,6 +10,7 @@ from flask import flash
 from flask_wtf.csrf import CSRFProtect
 from flask_wtf import FlaskForm
 import logging
+import openai
 import os
 import secrets
 import csv
@@ -380,6 +381,7 @@ def tasks():
 
 
 @app.route('/add_task', methods=['GET', 'POST'])
+@csrf.exempt
 @login_required
 def add_task():
     form = BaseForm()
@@ -713,6 +715,137 @@ def settings():
         else:
             flash('Password cannot be empty.', 'danger')
     return render_template('settings.html')
+
+
+############## AI INTEGRATION #####################
+
+@app.route('/create_task_nlp', methods=['POST'])
+@login_required
+def create_task_nlp():
+    openai.api_key = os.getenv('OPENAI_API_KEY')
+    if not openai.api_key:
+        return jsonify({"success": False, "message": "OpenAI API key is not set."}), 500
+    if not request.is_json:
+        return jsonify({"success": False, "message": "Invalid request format. JSON expected."}), 400
+
+    try:
+        print("\n=== NEW REQUEST ===")  
+        print("Request headers:", request.headers)  
+        print("Request JSON:", request.json)  
+    
+        data = request.get_json()
+        print("Parsed JSON data:", data)  
+        
+        if not data or 'input' not in data:
+            print("Missing input")  
+            return jsonify({"success": False, "message": "Input required"}), 400
+
+        user_input = data.get('input', '').strip()
+        print("User input:", user_input)  
+
+        data = request.json
+        
+        if not user_input:
+            return jsonify({"success": False, "message": "Please describe your task"}), 400
+
+        prompt = f"""Convert this task description into JSON format:
+        Input: "{user_input}"
+        Output format (must be valid JSON): {{
+            "title": "task name",
+            "due_date": "YYYY-MM-DD",
+            "priority": "High/Medium/Low"
+        }}
+        Return ONLY the JSON object, nothing else."""
+
+        try:
+            response = openai.Completion.create(
+                engine="text-davinci-003",
+                prompt=prompt,
+                max_tokens=100,
+                temperature=0.3  # Makes output more deterministic
+            )
+            ai_response = response['choices'][0]['text'].strip()
+        except Exception as e:
+            return jsonify({"success": False, "message": f"AI service error: {str(e)}"}), 500
+
+        # Extract JSON from response (handles cases where AI adds extra text)
+        try:
+            json_start = max(ai_response.find('{'), 0)
+            json_end = ai_response.rfind('}') + 1
+            task_data = json.loads(ai_response[json_start:json_end])
+        except json.JSONDecodeError:
+            return jsonify({
+                "success": False,
+                "message": "Couldn't parse AI response",
+                "ai_response": ai_response  # For debugging
+            }), 400
+
+        # Validate and sanitize data
+        if not all(k in task_data for k in ["title", "due_date", "priority"]):
+            return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+        try:
+            due_date = datetime.strptime(task_data['due_date'], '%Y-%m-%d').date()
+            if due_date < date.today():
+                return jsonify({"success": False, "message": "Due date cannot be in the past"}), 400
+        except ValueError:
+            return jsonify({"success": False, "message": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # Normalize priority
+        priority_map = {
+            'high': 'High',
+            'medium': 'Medium',
+            'low': 'Low'
+        }
+        priority = priority_map.get(task_data['priority'].lower(), 'Medium')
+
+        # Create task
+        new_task = Task(
+            title=task_data['title'][:100],  # Truncate if too long
+            due_date=due_date,
+            priority=PriorityLevel[priority],
+            status=TaskStatus.Pending,
+            user_id=current_user.id,
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(new_task)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Task created!",
+            "task": {
+                "title": new_task.title,
+                "due_date": new_task.due_date.isoformat(),
+                "priority": new_task.priority.value
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error in create_task_nlp: {str(e)}", exc_info=True)
+        return jsonify({"success": False, "message": "Internal server error"}), 500    
+        
+
+@app.route('/suggest_tasks', methods=['GET'])
+@login_required
+def suggest_tasks():
+    user_tasks = Task.query.filter_by(user_id=current_user.id).all()
+    # Example: Suggest tasks based on incomplete tasks
+    suggestions = [task.title for task in user_tasks if task.status != TaskStatus.Done]
+    return jsonify({"success": True, "suggestions": suggestions}), 200
+
+
+@csrf.exempt
+@app.route('/ai', methods=['GET', 'POST'])
+@login_required
+def ai():
+    # Fetch task suggestions
+    user_tasks = Task.query.filter_by(user_id=current_user.id).all()
+    suggestions = [task.title for task in user_tasks if task.status != TaskStatus.Done]
+
+    return render_template('ai.html', suggestions=suggestions)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div id="alert-container"></div>
+    
+    <h1 class="text-center mb-4">AI-Powered Features</h1>
+
+    <!-- NLP Task Creation -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title">Create Task with Natural Language</h3>
+            <div class="input-group mb-3">
+                <input type="text" id="nlp-task-input" class="form-control" 
+                       placeholder="e.g., 'Finish report by Friday with high priority'">
+                <button id="nlp-task-button" class="btn btn-primary" onclick="createTaskNLP()">
+                    Create Task
+                </button>
+            </div>
+            <small class="text-muted">Examples: "Call mom tomorrow", "Finish project by May 30th high priority"</small>
+        </div>
+    </div>
+
+    <!-- Task Suggestions -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title">Suggested Tasks</h3>
+            <div id="suggestions-container">
+                {% if suggestions %}
+                <ul class="list-group">
+                    {% for suggestion in suggestions %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ suggestion }}
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="useSuggestion('{{ suggestion }}')">Use</button>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">No suggestions available. Complete some tasks to get suggestions.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Function to use a suggestion
+function useSuggestion(text) {
+    document.getElementById('nlp-task-input').value = text;
+}
+</script>
+{% endblock %}
