@@ -743,13 +743,13 @@ Response Rules:
 @app.route('/create_task_nlp', methods=['POST'])
 @login_required
 def create_task_nlp():
-    projects = Project.query.filter_by(user_id=current_user.id).all()
-
     if not request.is_json:
         return jsonify({"success": False, "message": "Invalid request format. JSON expected."}), 400
 
     data = request.get_json()
     user_input = data.get('input', '').strip()
+    project_id = data.get('project_id')  # <-- Get project_id from request
+
     if not user_input:
         return jsonify({"success": False, "message": "Please describe your task"}), 400
 
@@ -819,14 +819,19 @@ Return ONLY the JSON object, nothing else."""
     }
     priority = priority_map.get(str(task_data['priority']).lower(), 'Medium')
 
+    # Ensure description is not None (since your DB may require it)
+    description = task_data.get('description') or "No description provided."
+
     # Create task
     try:
         new_task = Task(
             title=task_data['title'][:100],
+            description=description,
             due_date=due_date,
             priority=PriorityLevel[priority],
             status=TaskStatus.Pending,
             user_id=current_user.id,
+            project_id=project_id,  # <-- Use project_id here
             created_at=datetime.utcnow()
         )
         db.session.add(new_task)
@@ -842,7 +847,7 @@ Return ONLY the JSON object, nothing else."""
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"Database error: {str(e)}"}, projects=projects), 500
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     
 
 
@@ -862,9 +867,9 @@ def ai():
     # Fetch task suggestions
     user_tasks = Task.query.filter_by(user_id=current_user.id).all()
     suggestions = [task.title for task in user_tasks if task.status != TaskStatus.Done]
+    projects = Project.query.filter_by(owner_id=current_user.id).all() 
 
-    return render_template('ai.html', suggestions=suggestions)
-
+    return render_template('ai.html', suggestions=suggestions, projects=projects)  
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=True)

@@ -54,6 +54,9 @@
         <button class="btn-close" onclick="closeProjectDetails()">&times;</button>
     </div>
     <div class="panel-body">
+        <a href="{{ url_for('ai') }}" class="btn btn-outline-primary mb-3">
+            <span>✨ Generate Task with AI</span>
+        </a>
         <ul id="project-tasks-list" class="list-group"></ul>
         <a id="add-task-link" href="#" class="btn btn-primary w-100 mt-3">Add New Task</a>
         <button id="delete-project-btn" class="btn btn-danger w-100 mt-3" onclick="deleteProject()">Delete Project</button>

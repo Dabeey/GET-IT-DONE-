@@ -117,34 +117,39 @@ function deleteProject() {
 function createTaskNLP() {
     const inputElement = document.getElementById('nlp-task-input');
     const button = document.getElementById('nlp-task-button');
+    const btnText = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
     const input = inputElement.value.trim();
+    const projectId = document.getElementById('project-select').value;
 
     if (!input) {
-        alert('Please enter a task description.');
+        showAlert('Please enter a task description.', 'danger');
+        inputElement.focus();
         return;
     }
 
     button.disabled = true;
-    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+    btnText.classList.add('d-none');
+    btnSpinner.classList.remove('d-none');
 
     fetch('/create_task_nlp', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ input })
+        body: JSON.stringify({ input, project_id: projectId })
     })
     .then(response => response.json())
     .then(data => {
         button.disabled = false;
-        button.textContent = 'Create Task';
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
 
         if (data.success) {
-            alert('Task created!');
+            showAlert('Task created!', 'success');
             inputElement.value = '';
         } else {
-            alert(data.message || 'Failed to create task.');
-            // Optionally, show data.ai_response for debugging
+            showAlert(data.message || 'Failed to create task.', 'danger');
             if (data.ai_response) {
                 console.log('AI raw response:', data.ai_response);
             }
@@ -152,8 +157,9 @@ function createTaskNLP() {
     })
     .catch(error => {
         button.disabled = false;
-        button.textContent = 'Create Task';
-        alert('An error occurred while creating the task.');
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
+        showAlert('An error occurred while creating the task.', 'danger');
         console.error(error);
     });
 }
