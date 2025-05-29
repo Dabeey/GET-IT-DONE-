@@ -115,63 +115,45 @@ function deleteProject() {
 // AI INTEGRATION
 // AI INTEGRATION - IMPROVED VERSION
 function createTaskNLP() {
-    console.log("Button clicked - start"); 
     const inputElement = document.getElementById('nlp-task-input');
-    const button = document.querySelector('#nlp-task-button');
+    const button = document.getElementById('nlp-task-button');
     const input = inputElement.value.trim();
-    
+
     if (!input) {
-        showAlert('Please enter a task description', 'danger');
+        alert('Please enter a task description.');
         return;
     }
 
-    // Set loading state
     button.disabled = true;
     button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
 
     fetch('/create_task_nlp', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({ input })
     })
-    .then(response => {
+    .then(response => response.json())
+    .then(data => {
         button.disabled = false;
         button.textContent = 'Create Task';
-        
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
-        }
-        return response.json();
-    })
-    .then(data => {
+
         if (data.success) {
-            showAlert('Task created successfully!', 'success');
-            inputElement.value = ''; // Clear input
-            refreshTaskList(); // Refresh the tasks display
+            alert('Task created!');
+            inputElement.value = '';
+        } else {
+            alert(data.message || 'Failed to create task.');
+            // Optionally, show data.ai_response for debugging
+            if (data.ai_response) {
+                console.log('AI raw response:', data.ai_response);
+            }
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showAlert(error.message || 'Failed to create task', 'danger');
+        button.disabled = false;
+        button.textContent = 'Create Task';
+        alert('An error occurred while creating the task.');
+        console.error(error);
     });
-}
-
-// Helper function to show alerts
-function showAlert(message, type) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.role = 'alert';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    const container = document.querySelector('#alert-container');
-    container.innerHTML = '';
-    container.appendChild(alertDiv);
-    
-    setTimeout(() => alertDiv.remove(), 5000);
 }

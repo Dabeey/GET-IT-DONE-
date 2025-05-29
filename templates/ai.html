@@ -1,53 +1,164 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-5">
-    <div id="alert-container"></div>
-    
-    <h1 class="text-center mb-4">AI-Powered Features</h1>
+<div class="mb-3">
+    <label for="project-select" class="form-label fw-semibold">Project</label>
+    <select id="project-select" class="form-select">
+        {% for project in projects %}
+        <option value="{{ project.id }}">{{ project.name }}</option>
+        {% endfor %}
+    </select>
+</div>
 
-    <!-- NLP Task Creation -->
-    <div class="card mb-4">
+<div class="container py-5 d-flex flex-column align-items-center" style="min-height: 90vh;">
+    <div id="alert-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+
+    <div class="card shadow-lg mb-4" style="max-width: 500px; width: 100%;">
         <div class="card-body">
-            <h3 class="card-title">Create Task with Natural Language</h3>
-            <div class="input-group mb-3">
-                <input type="text" id="nlp-task-input" class="form-control" 
-                       placeholder="e.g., 'Finish report by Friday with high priority'">
-                <button id="nlp-task-button" class="btn btn-primary" onclick="createTaskNLP()">
-                    Create Task
-                </button>
+            <h2 class="card-title text-center mb-3" style="font-weight: 700; letter-spacing: 1px;">
+                <span class="text-primary">🤖 AI Task Creator</span>
+            </h2>
+            <form onsubmit="event.preventDefault(); createTaskNLP();">
+                <div class="input-group input-group-lg mb-3">
+                    <input type="text" id="nlp-task-input" class="form-control rounded-start"
+                        placeholder="e.g., Finish report by Friday, high priority" autocomplete="off">
+                    <button id="nlp-task-button" type="submit" class="btn btn-gradient-primary rounded-end">
+                        <span id="btn-text">Create Task</span>
+                        <span id="btn-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </form>
+            <div class="mb-2">
+                <small class="text-muted">Examples: "Call mom tomorrow", "Finish project by May 30th high priority"</small>
             </div>
-            <small class="text-muted">Examples: "Call mom tomorrow", "Finish project by May 30th high priority"</small>
         </div>
     </div>
 
-    <!-- Task Suggestions -->
-    <div class="card mb-4">
+    <div class="card shadow-sm" style="max-width: 500px; width: 100%;">
         <div class="card-body">
-            <h3 class="card-title">Suggested Tasks</h3>
+            <h4 class="card-title mb-3" style="font-weight: 600;">✨ Suggested Tasks</h4>
             <div id="suggestions-container">
                 {% if suggestions %}
-                <ul class="list-group">
+                <ul class="list-group list-group-flush">
                     {% for suggestion in suggestions %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ suggestion }}
-                        <button class="btn btn-sm btn-outline-primary" 
-                                onclick="useSuggestion('{{ suggestion }}')">Use</button>
+                        <span>{{ suggestion }}</span>
+                        <button class="btn btn-outline-primary btn-sm px-3" 
+                                onclick="useSuggestion('{{ suggestion }}')">
+                            Use
+                        </button>
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
-                <p class="text-muted">No suggestions available. Complete some tasks to get suggestions.</p>
+                <p class="text-muted mb-0">No suggestions available. Complete some tasks to get suggestions.</p>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
+<style>
+.btn-gradient-primary {
+    background: linear-gradient(90deg, #4f8cff 0%, #6f6fff 100%);
+    color: #fff;
+    border: none;
+    transition: background 0.2s;
+}
+.btn-gradient-primary:hover, .btn-gradient-primary:focus {
+    background: linear-gradient(90deg, #6f6fff 0%, #4f8cff 100%);
+    color: #fff;
+}
+.card {
+    border-radius: 1.25rem;
+}
+input.form-control {
+    box-shadow: none !important;
+    border-radius: 0.5rem 0 0 0.5rem !important;
+}
+input.form-control:focus {
+    border-color: #4f8cff;
+    box-shadow: 0 0 0 0.2rem rgba(79,140,255,.15);
+}
+#nlp-task-button {
+    border-radius: 0 0.5rem 0.5rem 0 !important;
+}
+</style>
+
 <script>
 // Function to use a suggestion
 function useSuggestion(text) {
     document.getElementById('nlp-task-input').value = text;
+    document.getElementById('nlp-task-input').focus();
+}
+
+// Modern feedback with toast
+function showAlert(message, type = 'success') {
+    const alertId = 'alert-' + Date.now();
+    const alertHtml = `
+        <div id="${alertId}" class="toast align-items-center text-bg-${type} border-0 show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    const container = document.getElementById('alert-container');
+    container.insertAdjacentHTML('beforeend', alertHtml);
+    setTimeout(() => {
+        const alertElem = document.getElementById(alertId);
+        if (alertElem) alertElem.remove();
+    }, 4000);
+}
+
+// Enhanced createTaskNLP with spinner and toast
+function createTaskNLP() {
+    const inputElement = document.getElementById('nlp-task-input');
+    const button = document.getElementById('nlp-task-button');
+    const btnText = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
+    const input = inputElement.value.trim();
+
+    if (!input) {
+        showAlert('Please enter a task description.', 'danger');
+        inputElement.focus();
+        return;
+    }
+
+    button.disabled = true;
+    btnText.classList.add('d-none');
+    btnSpinner.classList.remove('d-none');
+
+    fetch('/create_task_nlp', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ input })
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.disabled = false;
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
+
+        if (data.success) {
+            showAlert('Task created!', 'success');
+            inputElement.value = '';
+        } else {
+            showAlert(data.message || 'Failed to create task.', 'danger');
+            if (data.ai_response) {
+                console.log('AI raw response:', data.ai_response);
+            }
+        }
+    })
+    .catch(error => {
+        button.disabled = false;
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
+        showAlert('An error occurred while creating the task.', 'danger');
+        console.error(error);
+    });
 }
 </script>
 {% endblock %}

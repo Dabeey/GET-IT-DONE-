@@ -15,6 +15,10 @@ import os
 import secrets
 import csv
 import json
+import re
+from groq import Groq
+from dotenv import load_dotenv
+
 
 app = Flask(__name__)
 
@@ -719,99 +723,114 @@ def settings():
 
 ############## AI INTEGRATION #####################
 
+load_dotenv()
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+SYSTEM_PROMPT = """
+You are TaskMaster, an AI productivity assistant specializing in:
+1. Task management (creation, prioritization, tracking)
+2. Time management techniques (Pomodoro, Eisenhower Matrix)
+3. Professional formatting with Markdown
+
+Response Rules:
+- Always use this task format:
+  ✓ "Task" (Due: YYYY-MM-DD HH:MM, Priority: 🟢/🟡/🔴)
+- Include relevant emojis (📅, ⏰, ✅)
+- Add productivity tips when appropriate (prefix with 💡)
+- Use Markdown (**bold**, *italics*, ```code```)
+"""
+@csrf.exempt
 @app.route('/create_task_nlp', methods=['POST'])
 @login_required
 def create_task_nlp():
-    openai.api_key = os.getenv('OPENAI_API_KEY')
-    if not openai.api_key:
-        return jsonify({"success": False, "message": "OpenAI API key is not set."}), 500
+    projects = Project.query.filter_by(user_id=current_user.id).all()
+
     if not request.is_json:
         return jsonify({"success": False, "message": "Invalid request format. JSON expected."}), 400
 
+    data = request.get_json()
+    user_input = data.get('input', '').strip()
+    if not user_input:
+        return jsonify({"success": False, "message": "Please describe your task"}), 400
+
+    # Compose the prompt for Groq
+    prompt = f"""Convert this task description into a JSON object with keys: title, due_date (YYYY-MM-DD), priority (High/Medium/Low).
+Input: "{user_input}"
+Rules:
+- due_date must be today or a future date (never in the past). If the user does not specify, use today's date.
+- priority must be a string: "High", "Medium", or "Low"
+Output format (valid JSON only): {{"title": "...", "due_date": "YYYY-MM-DD", "priority": "High/Medium/Low"}}
+Example: {{"title": "call mom", "due_date": "2025-06-01", "priority": "Medium"}}
+Return ONLY the JSON object, nothing else."""
+
     try:
-        print("\n=== NEW REQUEST ===")  
-        print("Request headers:", request.headers)  
-        print("Request JSON:", request.json)  
-    
-        data = request.get_json()
-        print("Parsed JSON data:", data)  
-        
-        if not data or 'input' not in data:
-            print("Missing input")  
-            return jsonify({"success": False, "message": "Input required"}), 400
+        # Call Groq AI
+        response = groq_client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=200
+        )
+        ai_response = response.choices[0].message.content.strip()
+    except Exception as e:
+        return jsonify({"success": False, "message": f"AI service error: {str(e)}"}), 500
 
-        user_input = data.get('input', '').strip()
-        print("User input:", user_input)  
+    # Try to extract and repair JSON from AI response
+    try:
+        json_start = ai_response.find('{')
+        json_end = ai_response.rfind('}') + 1
+        json_str = ai_response[json_start:json_end]
 
-        data = request.json
-        
-        if not user_input:
-            return jsonify({"success": False, "message": "Please describe your task"}), 400
-
-        prompt = f"""Convert this task description into JSON format:
-        Input: "{user_input}"
-        Output format (must be valid JSON): {{
-            "title": "task name",
-            "due_date": "YYYY-MM-DD",
-            "priority": "High/Medium/Low"
-        }}
-        Return ONLY the JSON object, nothing else."""
-
-        try:
-            response = openai.Completion.create(
-                engine="text-davinci-003",
-                prompt=prompt,
-                max_tokens=100,
-                temperature=0.3  # Makes output more deterministic
+        # Repair common AI mistakes: missing "priority" key
+        if re.search(r'"\s*(Medium|High|Low)\s*"', json_str) and '"priority"' not in json_str:
+            json_str = re.sub(
+                r'("due_date"\s*:\s*"[^"]*"),\s*"(\w+)"',
+                r'\1, "priority": "\2"',
+                json_str
             )
-            ai_response = response['choices'][0]['text'].strip()
-        except Exception as e:
-            return jsonify({"success": False, "message": f"AI service error: {str(e)}"}), 500
+        task_data = json.loads(json_str)
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": "Couldn't parse AI response",
+            "ai_response": ai_response
+        }), 400
 
-        # Extract JSON from response (handles cases where AI adds extra text)
-        try:
-            json_start = max(ai_response.find('{'), 0)
-            json_end = ai_response.rfind('}') + 1
-            task_data = json.loads(ai_response[json_start:json_end])
-        except json.JSONDecodeError:
-            return jsonify({
-                "success": False,
-                "message": "Couldn't parse AI response",
-                "ai_response": ai_response  # For debugging
-            }), 400
+    # Validate and sanitize data
+    if not all(k in task_data for k in ["title", "due_date", "priority"]):
+        return jsonify({"success": False, "message": "Missing required fields"}), 400
 
-        # Validate and sanitize data
-        if not all(k in task_data for k in ["title", "due_date", "priority"]):
-            return jsonify({"success": False, "message": "Missing required fields"}), 400
+    # Parse and auto-correct due date
+    try:
+        due_date = datetime.strptime(task_data['due_date'], '%Y-%m-%d').date()
+        if due_date < date.today():
+            due_date = date.today()  # Auto-correct to today
+    except ValueError:
+        return jsonify({"success": False, "message": "Invalid date format. Use YYYY-MM-DD"}), 400
 
-        try:
-            due_date = datetime.strptime(task_data['due_date'], '%Y-%m-%d').date()
-            if due_date < date.today():
-                return jsonify({"success": False, "message": "Due date cannot be in the past"}), 400
-        except ValueError:
-            return jsonify({"success": False, "message": "Invalid date format. Use YYYY-MM-DD"}), 400
+    # Normalize priority
+    priority_map = {
+        'high': 'High',
+        'medium': 'Medium',
+        'low': 'Low'
+    }
+    priority = priority_map.get(str(task_data['priority']).lower(), 'Medium')
 
-        # Normalize priority
-        priority_map = {
-            'high': 'High',
-            'medium': 'Medium',
-            'low': 'Low'
-        }
-        priority = priority_map.get(task_data['priority'].lower(), 'Medium')
-
-        # Create task
+    # Create task
+    try:
         new_task = Task(
-            title=task_data['title'][:100],  # Truncate if too long
+            title=task_data['title'][:100],
             due_date=due_date,
             priority=PriorityLevel[priority],
             status=TaskStatus.Pending,
             user_id=current_user.id,
             created_at=datetime.utcnow()
         )
-        
         db.session.add(new_task)
         db.session.commit()
-        
         return jsonify({
             "success": True,
             "message": "Task created!",
@@ -821,12 +840,11 @@ def create_task_nlp():
                 "priority": new_task.priority.value
             }
         }), 201
-
     except Exception as e:
         db.session.rollback()
-        logging.error(f"Error in create_task_nlp: {str(e)}", exc_info=True)
-        return jsonify({"success": False, "message": "Internal server error"}), 500    
-        
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}, projects=projects), 500
+    
+
 
 @app.route('/suggest_tasks', methods=['GET'])
 @login_required
