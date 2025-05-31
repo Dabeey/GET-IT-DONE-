@@ -1,0 +1,16 @@
+echo "__pycache__/
+*.py[cod]
+*.swp
+.env
+.venv/
+venv/
+*.sqlite3
+.DS_Store
+.idea/
+.vscode/
+dist/
+build/
+*.egg-info/
+instance/dev.db*  # Ignore local SQLite files
+migrations/       # Ignore Flask-Migrate/Alembic files
+*.log" > .gitignore
