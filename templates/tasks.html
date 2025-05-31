@@ -3,214 +3,179 @@
 {% block title %}Tasks - Get It Done!{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="text-center mb-4">Manage Your Tasks</h1>
+<div class="container py-5 d-flex flex-column align-items-center" style="min-height: 90vh;">
+    <div class="glass-card shadow-lg mb-4 w-100" style="max-width: 750px;">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-4 pb-2">
+            <div>
+                <h2 class="fw-bold mb-1" style="letter-spacing: 0.5px; font-size: 1.2rem;">
+                    <span class="gradient-text" style=" font-size: 230%;">📝 Manage Your Tasks</span>
+                </h2>
+                <div class="text-muted" style="font-size: 0.95rem; font-weight: 400;">
+                    Stay organized and productive
+                </div>
+            </div>
+            <a href="{{ url_for('ai') }}" class="btn btn-gradient-primary btn-lg mt-3 mt-md-0" style="font-size: 1rem;">
+                <i class="bi bi-stars me-2"></i> Generate Task with AI
+            </a>
+        </div>
+        <!-- Filter Bar -->
+        <div class="filter-bar mb-4 d-flex flex-wrap justify-content-center px-4">
+            <a href="{{ url_for('tasks', filter='all') }}" class="btn btn-outline-primary me-2 mb-2 {% if filter_type == 'all' %}active{% endif %}">All</a>
+            <a href="{{ url_for('tasks', filter='today') }}" class="btn btn-outline-primary me-2 mb-2 {% if filter_type == 'today' %}active{% endif %}">Today</a>
+            <a href="{{ url_for('tasks', filter='week') }}" class="btn btn-outline-primary me-2 mb-2 {% if filter_type == 'week' %}active{% endif %}">This Week</a>
+            <a href="{{ url_for('tasks', filter='month') }}" class="btn btn-outline-primary me-2 mb-2 {% if filter_type == 'month' %}active{% endif %}">This Month</a>
+            <a href="{{ url_for('tasks', filter='pending') }}" class="btn btn-outline-warning me-2 mb-2 {% if filter_type == 'pending' %}active{% endif %}">Pending</a>
+            <a href="{{ url_for('tasks', filter='ongoing') }}" class="btn btn-outline-info me-2 mb-2 {% if filter_type == 'ongoing' %}active{% endif %}">Ongoing</a>
+            <a href="{{ url_for('tasks', filter='completed') }}" class="btn btn-outline-success me-2 mb-2 {% if filter_type == 'completed' %}active{% endif %}">Completed</a>
+            <a href="{{ url_for('tasks', filter='overdue') }}" class="btn btn-outline-danger mb-2 {% if filter_type == 'overdue' %}active{% endif %}">Overdue</a>
+        </div>
+        <!-- Tasks Section -->
+        {% if tasks|length > 0 %}
+        <div class="task-list">
+            <ul id="task-list" class="list-group">
+                {% for task in tasks %}
+                <li class="list-group-item task-item glass-task mb-3 py-3 px-4 d-flex align-items-center justify-content-between shadow-sm {% if task.status.value == 'Done' %}completed{% endif %}" data-task-id="{{ task.id }}" draggable="true">
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <!-- Checkbox for Marking as Complete -->
+                        <input type="checkbox" class="form-check-input me-3 modern-checkbox" {% if task.status.value == 'Done' %}checked{% endif %} onclick="markTaskComplete({{ task.id }})">
 
-    <!-- Filter Bar -->
-    <div class="filter-bar mb-4 d-flex justify-content-center">
-        <a href="{{ url_for('tasks', filter='all') }}" class="btn btn-outline-primary me-2 {% if filter_type == 'all' %}active{% endif %}">All</a>
-        <a href="{{ url_for('tasks', filter='today') }}" class="btn btn-outline-primary me-2 {% if filter_type == 'today' %}active{% endif %}">Today</a>
-        <a href="{{ url_for('tasks', filter='week') }}" class="btn btn-outline-primary me-2 {% if filter_type == 'week' %}active{% endif %}">This Week</a>
-        <a href="{{ url_for('tasks', filter='month') }}" class="btn btn-outline-primary me-2 {% if filter_type == 'month' %}active{% endif %}">This Month</a>
-        <a href="{{ url_for('tasks', filter='pending') }}" class="btn btn-outline-warning me-2 {% if filter_type == 'pending' %}active{% endif %}">Pending</a>
-        <a href="{{ url_for('tasks', filter='ongoing') }}" class="btn btn-outline-info me-2 {% if filter_type == 'ongoing' %}active{% endif %}">Ongoing</a>
-        <a href="{{ url_for('tasks', filter='completed') }}" class="btn btn-outline-success me-2 {% if filter_type == 'completed' %}active{% endif %}">Completed</a>
-        <a href="{{ url_for('tasks', filter='overdue') }}" class="btn btn-outline-danger {% if filter_type == 'overdue' %}active{% endif %}">Overdue</a>
-    </div>
-
-    <!-- Tasks Section -->
-    {% if tasks|length > 0 %}
-    <div class="task-list">
-        <ul id="task-list" class="list-group">
-            {% for task in tasks %}
-            <li class="list-group-item task-item rounded mb-3 {% if task.status.value == 'Done' %}completed{% endif %}" data-task-id="{{ task.id }}" draggable="true">
-                <div class="d-flex justify-content-between align-items-center">
-                    <!-- Checkbox for Marking as Complete -->
-                    <input type="checkbox" class="form-check-input me-3" {% if task.status.value == 'Done' %}checked{% endif %} onclick="markTaskComplete({{ task.id }})">
-
-                    <!-- Task Title and Details -->
-                    <div class="flex-grow-1">
-                        <strong class="{% if task.is_overdue %}text-danger{% endif %}">{{ task.title }}</strong>
-                        <small class="text-muted">Due: {{ task.due_date }}</small>
-                        {% if task.is_overdue %}
-                        <i class="bi bi-exclamation-triangle-fill text-danger ms-2" title="Overdue"></i>
-                        {% endif %}
-                        <span class="badge bg-secondary">{{ task.project.name }}</span>
+                        <!-- Task Title and Details -->
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                <strong class="fs-6 {% if task.is_overdue %}text-danger{% endif %}" style="font-weight:600;">{{ task.title }}</strong>
+                                {% if task.is_overdue %}
+                                <i class="bi bi-exclamation-triangle-fill text-danger ms-2" title="Overdue"></i>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center">
+                                <span class="badge bg-gradient bg-primary me-2 mb-1">{{ task.project.name }}</span>
+                                <span class="badge bg-light text-dark border me-2 mb-1"><i class="bi bi-calendar-event me-1"></i>Due: {{ task.due_date }}</span>
+                                <span class="badge bg-secondary me-2 mb-1">{{ task.priority.value }}</span>
+                                <span class="badge bg-light text-muted mb-1"><i class="bi bi-clock-history me-1"></i>{{ task.status.value }}</span>
+                            </div>
+                        </div>
                     </div>
-
-                    <!-- Transparent Status Checkboxes -->
-                    <div class="status-checkboxes d-flex align-items-center">
-                        <input type="radio" name="status-{{ task.id }}" class="form-check-input pending" {% if task.status.value == 'Pending' %}checked{% endif %} onclick="updateTaskStatus({{ task.id }}, 'Pending')">
-                        <input type="radio" name="status-{{ task.id }}" class="form-check-input ongoing" {% if task.status.value == 'In Progress' %}checked{% endif %} onclick="updateTaskStatus({{ task.id }}, 'In Progress')">
-                        <input type="radio" name="status-{{ task.id }}" class="form-check-input completed" {% if task.status.value == 'Done' %}checked{% endif %} onclick="updateTaskStatus({{ task.id }}, 'Done')">
+                    <!-- Modern Status Selectors -->
+                    <div class="status-checkboxes d-flex align-items-center ms-3">
+                        <input type="radio" name="status-{{ task.id }}" class="form-check-input status-radio pending" {% if task.status.value == 'Pending' %}checked{% endif %} onclick="updateTaskStatus({{ task.id }}, 'Pending')" title="Pending">
+                        <input type="radio" name="status-{{ task.id }}" class="form-check-input status-radio ongoing" {% if task.status.value == 'In Progress' %}checked{% endif %} onclick="updateTaskStatus({{ task.id }}, 'In Progress')" title="Ongoing">
+                        <input type="radio" name="status-{{ task.id }}" class="form-check-input status-radio completed" {% if task.status.value == 'Done' %}checked{% endif %} onclick="updateTaskStatus({{ task.id }}, 'Done')" title="Done">
                     </div>
-
                     <!-- Edit and Delete Icons -->
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center ms-3">
                         <a href="{{ url_for('edit_task', task_id=task.id) }}" class="text-primary me-3" title="Edit Task">
-                            <i class="bi bi-pencil-square"></i>
+                            <i class="bi bi-pencil-square fs-5"></i>
                         </a>
                         <button class="btn btn-link text-danger p-0" title="Delete Task" onclick="deleteTask({{ task.id }})">
-                            <i class="bi bi-trash"></i>
+                            <i class="bi bi-trash fs-5"></i>
                         </button>
                     </div>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center m-4" role="alert">
+            <i class="bi bi-info-circle me-2"></i>No tasks found for this filter.
+        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="alert alert-info text-center" role="alert">
-        No tasks found for this filter.
-    </div>
-    {% endif %}
 </div>
 
-<script>
-    // Drag and Drop Functionality
-    const taskList = document.getElementById('task-list');
-    let draggedItem = null;
-
-    taskList.addEventListener('dragstart', (e) => {
-        draggedItem = e.target;
-        e.target.style.opacity = 0.5;
-    });
-
-    taskList.addEventListener('dragend', (e) => {
-        e.target.style.opacity = '';
-    });
-
-    taskList.addEventListener('dragover', (e) => {
-        e.preventDefault();
-    });
-
-    taskList.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (e.target.classList.contains('task-item')) {
-            taskList.insertBefore(draggedItem, e.target.nextSibling);
-            saveTaskOrder();
-        }
-    });
-
-    // Save Task Order
-    function saveTaskOrder() {
-        const taskOrder = Array.from(taskList.children).map((task, index) => ({
-            id: task.dataset.taskId,
-            order: index + 1,
-        }));
-
-        fetch('/update_task_order', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ taskOrder }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.message || 'Failed to save task order.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while saving the task order.');
-            });
-    }
-
-    // Delete Task
-    function deleteTask(taskId) {
-        if (!confirm('Are you sure you want to delete this task?')) {
-            return;
-        }
-
-        fetch(`/delete_task/${taskId}`, {
-            method: 'POST',
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-                    taskElement.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    taskElement.style.opacity = '0';
-                    taskElement.style.transform = 'translateX(-100%)';
-                    setTimeout(() => taskElement.remove(), 500);
-                } else {
-                    alert(data.message || 'Failed to delete task.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while deleting the task.');
-            });
-    }
-
-    // Update Task Status
-    function updateTaskStatus(taskId, status) {
-        fetch(`/update_task_status/${taskId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ status }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.message || 'Failed to update task status.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while updating the task status.');
-            });
-    }
-
-    // Mark Task as Complete
-    function markTaskComplete(taskId) {
-        const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-        updateTaskStatus(taskId, 'Done');
-        taskElement.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-        taskElement.style.opacity = '0';
-        taskElement.style.transform = 'translateX(100%)';
-        setTimeout(() => taskElement.remove(), 500);
-    }
-</script>
-
 <style>
-    .status-checkboxes input {
-        margin: 0 5px;
-        cursor: pointer;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 2px solid transparent;
-        background-color: rgba(0, 0, 0, 0.1);
-    }
-
-    .status-checkboxes input.pending {
-        background-color: #ffc107;
-    }
-
-    .status-checkboxes input.ongoing {
-        background-color: #17a2b8;
-    }
-
-    .status-checkboxes input.completed {
-        background-color: #28a745;
-    }
-
-    .task-item.completed {
-        opacity: 0.5;
-        transition: opacity 0.5s ease-in-out;
-    }
-
-    .task-item {
-        cursor: grab;
-    }
-
-    .task-item:active {
-        cursor: grabbing;
-    }
+.glass-card {
+    background: rgba(255,255,255,0.85);
+    border-radius: 1.5rem;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+}
+.glass-task {
+    background: rgba(255,255,255,0.7);
+    border-radius: 1rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+    border: none;
+}
+.glass-task:hover {
+    box-shadow: 0 4px 24px 0 rgba(79,140,255,0.15);
+    transform: translateY(-2px) scale(1.01);
+}
+.gradient-text {
+    background: linear-gradient(90deg, #4f8cff 0%, #6f6fff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.btn-gradient-primary {
+    background: linear-gradient(90deg, #4f8cff 0%, #6f6fff 100%);
+    color: #fff;
+    border: none;
+    transition: background 0.2s;
+}
+.btn-gradient-primary:hover, .btn-gradient-primary:focus {
+    background: linear-gradient(90deg, #6f6fff 0%, #4f8cff 100%);
+    color: #fff;
+}
+.list-group-item {
+    border: none;
+}
+.task-item.completed {
+    opacity: 0.5;
+    filter: grayscale(0.3);
+}
+.task-item {
+    cursor: grab;
+    transition: opacity 0.5s, transform 0.5s;
+}
+.task-item:active {
+    cursor: grabbing;
+}
+.badge.bg-gradient {
+    background: linear-gradient(90deg, #4f8cff 0%, #6f6fff 100%);
+    color: #fff;
+}
+.modern-checkbox {
+    width: 1.3em;
+    height: 1.3em;
+    border-radius: 50% !important;
+    border: 2.5px solid #bdbdbd;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px 0 rgba(79,140,255,0.08);
+}
+.modern-checkbox:checked {
+    border-color: #198754;
+    background-color: #198754;
+}
+.status-checkboxes .status-radio {
+    margin: 0 4px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2.5px solid #e0e0e0;
+    background-color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.status-checkboxes .pending {
+    border-color: #ffc107;
+}
+.status-checkboxes .ongoing {
+    border-color: #0dcaf0;
+}
+.status-checkboxes .completed {
+    border-color: #198754;
+}
+.status-checkboxes .pending:checked {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+.status-checkboxes .ongoing:checked {
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+.status-checkboxes .completed:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
 </style>
 {% endblock %}
