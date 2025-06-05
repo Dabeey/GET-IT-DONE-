@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 USER appuser
 
 # Expose port (adjust if needed)
-EXPOSE 5000
+EXPOSE 10000
 
 # Run with Gunicorn (production WSGI server)
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "main:app"]

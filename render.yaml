@@ -3,17 +3,16 @@ services:
     name: get-it-done
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn main:app
+    startCommand: gunicorn -b 0.0.0.0:10000 main:app
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: get-it-done-db
           property: connectionString
       - key: SECRET_KEY
-        value: 'REPLACE_ME'
+        value: ''
 
 databases:
   - name: get-it-done-db
     databaseName: getitdone
     user: dabeey
-
